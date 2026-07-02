@@ -1,4 +1,3 @@
-# auto_recover.py
 import os
 import requests
 from slack_sdk import WebClient
@@ -11,7 +10,9 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN")
 GITHUB_ORG = os.getenv("GITHUB_ORG", "d33nAI")
 SLACK_NOTIFICATION_CHANNEL = os.getenv("SLACK_NOTIFICATION_CHANNEL", "C09HGEUUXK8")
-TEST_MODE = os.getenv("TEST_MODE", "True").lower() == "true"  # Reads string, converts to bool
+# Convert string to boolean: if "False" (case-insensitive) -> False, else True
+TEST_MODE = os.getenv("TEST_MODE", "True").lower() != "false"
+
 
 # Initialize Slack client
 slack_client = WebClient(token=SLACK_BOT_TOKEN)

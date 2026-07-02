@@ -1,41 +1,30 @@
+# main.py
 import os
 from dotenv import load_dotenv
 
-# Load environment variables from .env file (only for local development)
 load_dotenv()
 
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 import ghost_hunter
 import ai_summary
 import auto_recover
+import io
+import csv
 
 app = FastAPI()
+
 @app.get("/", response_class=HTMLResponse)
 async def show_dashboard():
-    # 1. Get the ghost list from our hunter
     ghost_list = ghost_hunter.find_ghosts("employees.csv")
-    
-    # 2. Find the absolute worst ghost (for the AI roast)
     top_ghost = ghost_list[0]
-    
-    # 3. Get the AI roast message
     ai_message = ai_summary.get_ai_roast(top_ghost)
     
-    # ============================================================
-    # CALCULATE TOTAL MONTHLY SAVINGS
-    # ============================================================
-    # Ghosts are defined as people with a score >= 60
     ghosts = [person for person in ghost_list if person['score'] >= 60]
     total_savings = sum(person['salary'] for person in ghosts)
     ghost_count = len(ghosts)
-    
-    # Format the number with commas (e.g., 29,400)
     total_savings_formatted = f"{total_savings:,}"
     
-    # ============================================================
-    # BUILD THE HTML PAGE
-    # ============================================================
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -54,7 +43,6 @@ async def show_dashboard():
             }}
             h1 {{ color: #2c3e50; font-weight: 300; border-bottom: 2px solid #eee; padding-bottom: 15px; }}
             
-            /* ---- AI Alert Box ---- */
             .alert {{ 
                 background: #fff3cd; 
                 border-left: 5px solid #ffc107; 
@@ -65,7 +53,6 @@ async def show_dashboard():
                 font-size: 1.1em;
             }}
             
-            /* ---- SAVINGS CARD ---- */
             .savings-card {{
                 background: linear-gradient(135deg, #11998e, #38ef7d);
                 border-radius: 12px;
@@ -113,7 +100,28 @@ async def show_dashboard():
                 opacity: 0.8;
             }}
             
-            /* ---- Table ---- */
+            .table-header {{
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 15px;
+            }}
+            .download-btn {{
+                background: #2c3e50;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 1em;
+                text-decoration: none;
+                display: inline-block;
+                transition: background 0.2s;
+            }}
+            .download-btn:hover {{
+                background: #1a252f;
+            }}
+            
             table {{ 
                 width: 100%; 
                 border-collapse: collapse; 
@@ -139,7 +147,6 @@ async def show_dashboard():
             tr:last-child td {{ border-bottom: none; }}
             tr:hover td {{ background: #f8f9fa; }}
             
-            /* ---- Badges ---- */
             .badge {{ 
                 padding: 5px 12px; 
                 border-radius: 20px; 
@@ -151,7 +158,6 @@ async def show_dashboard():
             .badge-sus {{ background: #ff9800; color: white; }}
             .badge-active {{ background: #4caf50; color: white; }}
             
-            /* ---- Auto-Recover Button ---- */
             .recover-btn {{
                 background: #dc3545;
                 color: white;
@@ -198,12 +204,10 @@ async def show_dashboard():
         <div class="container">
             <h1>👻 HR Ghost Hunter Dashboard</h1>
             
-            <!-- AI Alert -->
             <div class="alert">
                 <strong>🤖 AI Agent says:</strong> {ai_message}
             </div>
             
-            <!-- SAVINGS CARD -->
             <div class="savings-card">
                 <div class="left">
                     <span class="label">💰 Total Monthly Savings Opportunity</span>
@@ -216,7 +220,12 @@ async def show_dashboard():
                 </div>
             </div>
 
-            <h2>Employee Audit Report (Sorted by Ghost Score)</h2>
+            <div class="table-header">
+                <h2>Employee Audit Report (Sorted by Ghost Score)</h2>
+                <a href="/download/report" download>
+                    <button class="download-btn">📥 Download CSV Report</button>
+                </a>
+            </div>
             
             <table>
                 <thead>
@@ -233,12 +242,10 @@ async def show_dashboard():
                 <tbody>
     """
     
-    # Loop through the results to build the table rows
     for person in ghost_list:
-        # Pick a color for the status badge
         if person['status'] == "GHOST - Reclaim License!":
             badge_class = "badge-ghost"
-            show_recover_button = True  # Show button for ghosts
+            show_recover_button = True
         elif person['status'] == "Suspicious - Check manually":
             badge_class = "badge-sus"
             show_recover_button = False
@@ -246,10 +253,8 @@ async def show_dashboard():
             badge_class = "badge-active"
             show_recover_button = False
         
-        # Escape the name for use in JavaScript (in case it has quotes)
         escaped_name = person['name'].replace("'", "\\'").replace('"', '&quot;')
             
-        # Add a new row to the table
         html_content += f"""
             <tr>
                 <td><strong>{person['name']}</strong></td>
@@ -262,7 +267,6 @@ async def show_dashboard():
                     <span class="badge {badge_class}">{person['status']}</span>
         """
         
-        # Add the Auto-Recover button ONLY if it's a ghost
         if show_recover_button:
             html_content += f"""
                     <button 
@@ -279,7 +283,6 @@ async def show_dashboard():
             </tr>
         """
     
-    # Close the HTML tags
     html_content += f"""
                 </tbody>
             </table>
@@ -289,21 +292,20 @@ async def show_dashboard():
             </div>
         </div>
         
-        <!-- ========================================================== -->
-        <!-- JAVASCRIPT FOR AUTO-RECOVER                                 -->
-        <!-- ========================================================== -->
         <script>
             function recoverGhost(name) {{
-                // Find the button for this specific ghost
+                // --- CONFIRMATION DIALOG ---
+                if (!confirm(`⚠️ Are you sure you want to recover ${{name}}? This will remove them from GitHub and notify HR.`)) {{
+                    return; // User clicked "Cancel"
+                }}
+                
                 const button = document.querySelector(`.recover-btn[data-name="${{name}}"]`);
                 if (!button) return;
                 
-                // Disable the button and show loading state
                 button.disabled = true;
                 button.textContent = '⏳ Processing...';
                 button.className = 'recover-btn loading';
                 
-                // Send the recovery request
                 fetch(`/recover/${{encodeURIComponent(name)}}`, {{
                     method: 'POST',
                 }})
@@ -312,16 +314,13 @@ async def show_dashboard():
                     if (data.success) {{
                         button.textContent = '✅ Recovered!';
                         button.className = 'recover-btn success';
-                        // Refresh the page after 2 seconds to update the dashboard
                         setTimeout(() => {{
                             location.reload();
                         }}, 2000);
                     }} else {{
                         button.textContent = '❌ Failed';
                         button.className = 'recover-btn error';
-                        // Show the error message in an alert
                         alert(`Recovery failed: ${{data.message}}`);
-                        // Re-enable after 3 seconds so they can try again
                         setTimeout(() => {{
                             button.disabled = false;
                             button.textContent = '⚡ Recover';
@@ -348,19 +347,41 @@ async def show_dashboard():
     
     return html_content
 
-# ============================================================
-# AUTO-RECOVER API ENDPOINT
-# ============================================================
-@app.post("/recover/{name}")
-async def recover_ghost(name: str):
-    """
-    API endpoint that recovers a ghost by removing them from GitHub
-    and sending a Slack notification.
-    """
-    # 1. Get the latest ghost list
+# --- CSV DOWNLOAD ENDPOINT ---
+@app.get("/download/report")
+async def download_report():
     ghost_list = ghost_hunter.find_ghosts("employees.csv")
     
-    # 2. Find the ghost with the matching name
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Header
+    writer.writerow(["Name", "Team", "Monthly Salary", "Days Since Code", "Days Since Slack", "Ghost Score", "Status"])
+    
+    # Rows
+    for person in ghost_list:
+        writer.writerow([
+            person['name'],
+            person['team'],
+            person['salary'],
+            person['github_gap_days'],
+            person['slack_gap_days'],
+            person['score'],
+            person['status']
+        ])
+    
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=ghost_report.csv"}
+    )
+
+# --- AUTO-RECOVER ENDPOINT ---
+@app.post("/recover/{name}")
+async def recover_ghost(name: str):
+    ghost_list = ghost_hunter.find_ghosts("employees.csv")
+    
     target_ghost = None
     for person in ghost_list:
         if person['name'].lower() == name.lower():
@@ -373,14 +394,12 @@ async def recover_ghost(name: str):
             content={"success": False, "message": f"Ghost '{name}' not found"}
         )
     
-    # 3. Check if they're actually a ghost (score >= 60)
     if target_ghost['score'] < 60:
         return JSONResponse(
             status_code=400,
             content={"success": False, "message": f"{name} is not a ghost (score: {target_ghost['score']})"}
         )
     
-    # 4. Perform the recovery
     success, github_msg, slack_msg = auto_recover.auto_recover_ghost(target_ghost)
     
     return {

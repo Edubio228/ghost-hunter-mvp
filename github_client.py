@@ -48,3 +48,10 @@ def get_last_commit_date(github_username):
     except requests.exceptions.RequestException as e:
         print(f"❌ Network error for {github_username}: {e}")
         return None
+    
+
+if __name__ == "__main__":
+    print("Testing GitHub API...")
+    print("torvalds:", get_last_commit_date("torvalds"))
+    print("dummy-ghost:", get_last_commit_date("dummy-ghost"))
+    print("Edubio228:", get_last_commit_date("Edubio228"))
