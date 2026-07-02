@@ -1,10 +1,10 @@
-# ghost_hunter.py
+# app/ghost_hunter.py
 import pandas as pd
 from datetime import datetime, timedelta
 import math
-import random  # <--- NEW: For generating realistic fake Slack data
-from github_client import get_last_commit_date
-from slack_client import get_last_message_date_for_all_users
+import random
+from .github_client import get_last_commit_date
+from .slack_client import get_last_message_date_for_all_users
 
 def find_ghosts(csv_file_path):
     # Read the CSV file
@@ -20,7 +20,7 @@ def find_ghosts(csv_file_path):
     slack_data = get_last_message_date_for_all_users()
     
     # Let's get a mapping of user ID to name from Slack
-    from slack_client import get_all_users
+    from .slack_client import get_all_users
     slack_users = get_all_users()
     
     # Now create a mapping from name (lowercase) to last active date
@@ -47,17 +47,13 @@ def find_ghosts(csv_file_path):
             print(f"✅ Real Slack data found for {person['name']}: {slack_gap} days")
         else:
             # SMART FALLBACK: Generate realistic fake Slack data
-            # This keeps the demo interesting while you fix the Slack API
             if person['name'] in ['Alice Johnson', 'Bob Smith', 'Dave Brown', 'Frank Wilson', 'Grace Lee']:
-                # Active users – active in last 1-7 days
                 days_ago = random.randint(1, 7)
                 slack_gap = days_ago
             elif person['name'] in ['Henry Clark']:
-                # Suspicious – 30-60 days
                 days_ago = random.randint(30, 60)
                 slack_gap = days_ago
             else:
-                # Ghosts – 100-500 days (Carol, Eve, Ivy, Jack)
                 days_ago = random.randint(100, 500)
                 slack_gap = days_ago
             

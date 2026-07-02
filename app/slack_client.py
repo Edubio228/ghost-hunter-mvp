@@ -1,4 +1,4 @@
-# slack_client.py
+# app/slack_client.py
 import os
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
@@ -15,6 +15,10 @@ SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN")
 client = WebClient(token=SLACK_BOT_TOKEN)
 
 def get_all_users() -> Dict[str, str]:
+    """
+    Fetches a list of all users in the workspace.
+    Returns a dictionary: { 'user_id': 'display_name', ... }
+    """
     try:
         response = client.users_list()
         users = {}
@@ -35,6 +39,10 @@ def get_all_users() -> Dict[str, str]:
         return {}
 
 def get_last_active_date(user_id: str) -> Optional[date]:
+    """
+    Gets the user's last activity date using users.getPresence.
+    This does NOT require im:history scope!
+    """
     try:
         response = client.users_getPresence(user=user_id)
         
@@ -57,6 +65,10 @@ def get_last_active_date(user_id: str) -> Optional[date]:
         return None
 
 def get_last_message_date_for_all_users() -> Dict[str, date]:
+    """
+    Fetches last active date for EVERY user in the workspace.
+    Returns: { 'user_id': date_object, ... }
+    """
     print("📡 Fetching user list from Slack...")
     all_users = get_all_users()
     

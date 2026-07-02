@@ -1,4 +1,4 @@
-# github_client.py
+# app/github_client.py
 import os
 import requests
 from datetime import datetime, date
@@ -9,6 +9,11 @@ from datetime import datetime, date
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 
 def get_last_commit_date(github_username):
+    """
+    Asks GitHub: "When did this user last push code to any public repository?"
+    Returns a Python 'date' object, or None if we can't find any commits.
+    """
+    
     if not github_username or github_username == "unknown":
         return None
         
@@ -48,10 +53,3 @@ def get_last_commit_date(github_username):
     except requests.exceptions.RequestException as e:
         print(f"❌ Network error for {github_username}: {e}")
         return None
-    
-
-if __name__ == "__main__":
-    print("Testing GitHub API...")
-    print("torvalds:", get_last_commit_date("torvalds"))
-    print("dummy-ghost:", get_last_commit_date("dummy-ghost"))
-    print("Edubio228:", get_last_commit_date("Edubio228"))

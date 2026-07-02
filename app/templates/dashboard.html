@@ -1,0 +1,174 @@
+<!-- app/templates/dashboard.html -->
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- AI Alert -->
+    <div class="col-12 mb-4">
+        <div class="alert alert-warning">
+            <i class="bi bi-robot"></i>
+            <strong>AI Agent says:</strong> {{ ai_message }}
+        </div>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card stats-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="label"><i class="bi bi-coin"></i> Total Monthly Savings</div>
+                    <div class="number">${{ total_savings_formatted }}</div>
+                    <div class="label mt-2">By reclaiming {{ ghost_count }} ghost employee(s)</div>
+                </div>
+                <div class="text-center">
+                    <div style="font-size: 3rem;">{{ ghost_count }}</div>
+                    <div style="font-size: 0.8rem; opacity: 0.8;">Ghosts Found</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center p-3">
+            <i class="bi bi-people" style="font-size: 2rem; color: #4caf50;"></i>
+            <h4>{{ active_count }}</h4>
+            <p class="text-muted mb-0">Active Employees</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center p-3">
+            <i class="bi bi-exclamation-triangle" style="font-size: 2rem; color: #ff9800;"></i>
+            <h4>{{ suspicious_count }}</h4>
+            <p class="text-muted mb-0">Suspicious</p>
+        </div>
+    </div>
+</div>
+
+<!-- Download Report Button -->
+<div class="row mb-3">
+    <div class="col-12 text-end">
+        <a href="/download/report" class="btn btn-dark">
+            <i class="bi bi-download"></i> Download CSV Report
+        </a>
+    </div>
+</div>
+
+<!-- Employee Table -->
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title mb-3">
+            <i class="bi bi-table"></i> Employee Audit Report
+        </h5>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Team</th>
+                        <th>Salary</th>
+                        <th>Days Since Code</th>
+                        <th>Days Since Slack</th>
+                        <th>Ghost Score</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for person in ghost_list %}
+                    <tr>
+                        <td><strong>{{ person.name }}</strong></td>
+                        <td>{{ person.team }}</td>
+                        <td>${{ "{:,.0f}".format(person.salary) }}</td>
+                        <td>{{ person.github_gap_days }} days</td>
+                        <td>{{ person.slack_gap_days }} days</td>
+                        <td>
+                            <div class="progress" style="height: 20px; width: 100px;">
+                                <div class="progress-bar 
+                                    {% if person.score >= 60 %}bg-danger
+                                    {% elif person.score >= 20 %}bg-warning
+                                    {% else %}bg-success{% endif %}"
+                                    role="progressbar"
+                                    style="width: {{ person.score }}%;"
+                                    aria-valuenow="{{ person.score }}"
+                                    aria-valuemin="0"
+                                    aria-valuemax="100">
+                                    {{ person.score }}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="
+                                {% if person.status == 'GHOST - Reclaim License!' %}ghost-badge
+                                {% elif person.status == 'Suspicious - Check manually' %}sus-badge
+                                {% else %}active-badge{% endif %}
+                            ">
+                                {{ person.status }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if person.status == 'GHOST - Reclaim License!' %}
+                            <button class="recover-btn" onclick="recoverGhost('{{ person.name }}')" data-name="{{ person.name }}">
+                                <i class="bi bi-lightning"></i> Recover
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function recoverGhost(name) {
+    if (!confirm(`⚠️ Are you sure you want to recover ${name}? This will remove them from GitHub and notify HR.`)) {
+        return;
+    }
+    
+    const button = document.querySelector(`.recover-btn[data-name="${name}"]`);
+    if (!button) return;
+    
+    button.disabled = true;
+    button.innerHTML = '<i class="bi bi-hourglass"></i> Processing...';
+    button.className = 'recover-btn loading';
+    
+    fetch(`/recover/${encodeURIComponent(name)}`, {
+        method: 'POST',
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            button.innerHTML = '<i class="bi bi-check-circle"></i> Recovered!';
+            button.className = 'recover-btn success';
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            button.innerHTML = '<i class="bi bi-x-circle"></i> Failed';
+            button.className = 'recover-btn error';
+            alert(`Recovery failed: ${data.message}`);
+            setTimeout(() => {
+                button.disabled = false;
+                button.innerHTML = '<i class="bi bi-lightning"></i> Recover';
+                button.className = 'recover-btn';
+            }, 3000);
+        }
+    })
+    .catch(error => {
+        button.innerHTML = '<i class="bi bi-x-circle"></i> Error';
+        button.className = 'recover-btn error';
+        alert(`Network error: ${error.message}`);
+        setTimeout(() => {
+            button.disabled = false;
+            button.innerHTML = '<i class="bi bi-lightning"></i> Recover';
+            button.className = 'recover-btn';
+        }, 3000);
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,48 @@
+<!-- app/templates/settings.html -->
+{% extends "base.html" %}
+
+{% block title %}Settings{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-gear"></i> Company Settings
+                </h5>
+                
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">GitHub Organization</label>
+                        <input type="text" class="form-control" name="github_org" value="{{ company.github_org }}">
+                        <small class="text-muted">Your GitHub organization name (e.g., acme-corp)</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Slack Channel ID</label>
+                        <input type="text" class="form-control" name="slack_channel" value="{{ company.slack_channel }}">
+                        <small class="text-muted">The Slack channel ID for notifications (starts with C)</small>
+                    </div>
+                    
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" name="test_mode" 
+                               {% if settings.test_mode %}checked{% endif %}>
+                        <label class="form-check-label">Test Mode (simulate actions)</label>
+                    </div>
+                    
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" name="auto_recover" 
+                               {% if settings.auto_recover_enabled %}checked{% endif %}>
+                        <label class="form-check-label">Enable Auto-Recover</label>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save"></i> Save Settings
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,3 +1,4 @@
+# app/auto_recover.py
 import os
 import requests
 from slack_sdk import WebClient
@@ -10,14 +11,16 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN")
 GITHUB_ORG = os.getenv("GITHUB_ORG", "d33nAI")
 SLACK_NOTIFICATION_CHANNEL = os.getenv("SLACK_NOTIFICATION_CHANNEL", "C09HGEUUXK8")
-# Convert string to boolean: if "False" (case-insensitive) -> False, else True
-TEST_MODE = os.getenv("TEST_MODE", "True").lower() != "false"
-
+TEST_MODE = os.getenv("TEST_MODE", "True").lower() == "true"
 
 # Initialize Slack client
 slack_client = WebClient(token=SLACK_BOT_TOKEN)
 
 def remove_user_from_github(username):
+    """
+    Removes a user from the GitHub organization.
+    Returns: (success: bool, message: str)
+    """
     if TEST_MODE:
         print(f"🧪 TEST MODE: Would remove @{username} from {GITHUB_ORG}")
         return True, f"🧪 TEST: Successfully removed @{username} (test mode)"
@@ -50,6 +53,9 @@ def remove_user_from_github(username):
         return False, f"❌ Network error: {str(e)}"
 
 def send_slack_notification(ghost_name, github_username, salary, manager_email="the manager"):
+    """
+    Sends a Slack message to the notification channel about the recovery.
+    """
     if TEST_MODE:
         print(f"🧪 TEST MODE: Would send Slack notification about {ghost_name}")
         return True, "🧪 TEST: Slack notification sent (test mode)"
@@ -86,6 +92,10 @@ Please follow up with HR to reclaim the license.
         return False, f"❌ Unexpected error: {str(e)}"
 
 def auto_recover_ghost(ghost_data):
+    """
+    Main function: removes ghost from GitHub and sends Slack notification.
+    Returns: (success: bool, github_message: str, slack_message: str)
+    """
     name = ghost_data['name']
     github_username = ghost_data['github_username']
     salary = ghost_data['salary']

@@ -1,4 +1,4 @@
-# ai_summary.py
+# app/ai_summary.py
 import os
 from openai import OpenAI
 
@@ -15,6 +15,12 @@ client = OpenAI(
 )
 
 def get_ai_roast(worst_ghost):
+    """
+    Uses OpenRouter's automatic model selection to generate a witty roast.
+    OpenRouter picks the best available free model.
+    """
+    
+    # Build the prompt
     prompt = f"""
     You are a strict, slightly sarcastic CFO. 
     Employee {worst_ghost['name']} hasn't committed code in {worst_ghost['github_gap_days']} days 
