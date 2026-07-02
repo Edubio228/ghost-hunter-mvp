@@ -1,0 +1,11 @@
+name,email,team,monthly_salary,github_username,last_slack_message
+Alice Johnson,alice@company.com,Engineering,9500,torvalds,2026-06-30
+Bob Smith,bob@company.com,Engineering,8500,gaearon,2026-06-30
+Carol White,carol@company.com,Engineering,12000,ghost-user-123,2023-01-16
+Dave Brown,dave@company.com,Product,10500,sindresorhus,2026-06-29
+Eve Davis,eve@company.com,Product,9000,shadcn,2026-01-10
+Frank Wilson,frank@company.com,Engineering,11000,evanw,2026-06-30
+Grace Lee,grace@company.com,Design,8800,inactive-user,2026-06-28
+Henry Clark,henry@company.com,Engineering,7700,antfu,2026-05-30
+Ivy Martinez,ivy@company.com,Design,9300,developit,2024-09-11
+Jack Jones,jack@company.com,Product,9800,vercel,2026-06-01
